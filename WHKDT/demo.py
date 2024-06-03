@@ -63,7 +63,7 @@ def main():
     if not os.path.exists("models"):
         os.makedirs("models")
 
-    torch.save(student_final.state_dict(), "./models/student_model.pth")
+    Trainer.save_model("models/student_model.pth")
 
 if __name__ == "__main__":
     main()
