@@ -13,12 +13,6 @@ class TrainKD():
         Args:
         teacher_model: teacher model
         student_model: student model
-        dataset: dataset, includes train_loader and test_loader
-        alpha: weight for the soft target loss
-        beta: weight for the hard target loss
-
-        Returns:
-        student_model: trained student model
         """
 
         self.teacher_model = teacher_model
@@ -34,6 +28,22 @@ class TrainKD():
               criterion:nn.Module=nn.CrossEntropyLoss(),
               teacher_epochs:int=20,
               student_epochs:int=20):
+        """
+        Train student model using knowledge distillation.
+
+        Args:
+        dataset: tuple of train_loader and test_loader
+        alpha: weight for soft target
+        beta: weight for hard target
+        optimizer: optimizer to use
+        lr: learning rate
+        criterion: loss function
+        teacher_epochs: number of epochs to train teacher model
+        student_epochs: number of epochs to train student model
+
+        Returns:
+        Trained student model
+        """
         
         self.teacher_model.to(self.device)
         self.student_model.to(self.device)
@@ -56,4 +66,19 @@ class TrainKD():
         return self.student_model
 
     def save_model(self, path:str):
-        torch.save(self.student_model.state_dict(), path)
+        """
+        Save the student model
+
+        Args:
+        path: path to save the student model
+        
+        Returns:
+        None
+        """
+        import os
+        from time import time
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        torch.save(self.student_model.state_dict(), path + f"/student_model_{time}.pth")
