@@ -54,3 +54,6 @@ class TrainKD():
         test(self.student_model, self.device, test_loader, criterion, mode="Classification")
         
         return self.student_model
+
+    def save_model(self, path:str):
+        torch.save(self.student_model.state_dict(), path)
