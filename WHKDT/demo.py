@@ -60,10 +60,7 @@ def main():
     Trainer = TrainKD(TeacherModel(), StudentModel())
     student_final = Trainer.train((train_loader, test_loader), alpha=0.5, beta=0.5, optimizer="Adam", lr=0.001, teacher_epochs=20, student_epochs=20)
 
-    if not os.path.exists("models"):
-        os.makedirs("models")
-
-    Trainer.save_model("models/student_model.pth")
+    Trainer.save_model("models")
 
 if __name__ == "__main__":
     main()
