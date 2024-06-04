@@ -10,7 +10,8 @@ def train_teacher(model,
                   train_loader, 
                   optimizer, 
                   epochs,
-                  criterion):
+                  criterion,
+                  scheduler=None):
     
     model.train()
     train_loss = []
@@ -25,6 +26,8 @@ def train_teacher(model,
                 loss.backward()
                 optimizer.step()
                 pbar.set_postfix({'Loss': loss.item()})
+            if scheduler is not None:
+                scheduler.step()
         train_loss.append(loss.item())
     
     return train_loss
@@ -38,7 +41,8 @@ def train_student(student_model,
                   optimizer, 
                   alpha, 
                   beta, 
-                  epochs):
+                  epochs,
+                  scheduler=None):
     
     student_model.train()
     teacher_model.eval()
@@ -56,6 +60,8 @@ def train_student(student_model,
                 loss.backward()
                 optimizer.step()
                 pbar.set_postfix({'Loss': loss.item()})
+            if scheduler is not None:
+                scheduler.step()
         train_loss.append(loss.item())
     
     return train_loss
