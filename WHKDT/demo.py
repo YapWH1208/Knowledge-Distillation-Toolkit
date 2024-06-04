@@ -58,7 +58,15 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     Trainer = TrainKD(TeacherModel(), StudentModel())
-    student_final = Trainer.train((train_loader, test_loader), alpha=0.5, beta=0.5, optimizer="Adam", lr=0.001, teacher_epochs=20, student_epochs=20)
+    student_final = Trainer.train((train_loader, test_loader), 
+                                  alpha=0.5, 
+                                  beta=0.5, 
+                                  optimizer="Adam", 
+                                  lr=0.001, 
+                                  criterion="CE", 
+                                  teacher_epochs=20, 
+                                  student_epochs=20,
+                                  scheduler="None")
 
     Trainer.save_model("models")
 
