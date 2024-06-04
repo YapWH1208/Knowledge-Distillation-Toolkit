@@ -86,3 +86,21 @@ class TrainKD():
         test(self.student_model, self.device, test_loader, criterion, mode="Classification")
         
         return self.student_model
+
+    def save_model(self, path:str):
+        """
+        Save the student model
+
+        Args:
+        path: path to save the student model
+        
+        Returns:
+        None
+        """
+        import os
+        from time import time
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        torch.save(self.student_model.state_dict(), path + f"/student_model_{time}.pth")

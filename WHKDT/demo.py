@@ -68,10 +68,7 @@ def main():
                                   student_epochs=20,
                                   scheduler="None")
 
-    if not os.path.exists("models"):
-        os.makedirs("models")
-
-    torch.save(student_final.state_dict(), "./models/student_model.pth")
+    Trainer.save_model("models")
 
 if __name__ == "__main__":
     main()
