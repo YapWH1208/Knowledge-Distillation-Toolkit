@@ -96,8 +96,10 @@ def test(model,
     if mode == "Classification":
         accuracy = 100. * correct / len(test_loader.dataset)
         print(f'Test set: Average loss: {loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({accuracy:.2f}%)')
+        return accuracy, loss
     else:
         print(f'Test set: Average loss: {loss:.4f}')
+        return loss
 
 
 ########################################################################################
