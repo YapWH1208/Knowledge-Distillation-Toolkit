@@ -6,18 +6,21 @@ import torch.optim as optim
 class TrainKD():
     def __init__(self, 
                  teacher_model, 
-                 student_model):
+                 student_model,
+                 mode:str="Classification"):
         """
         Initialize the KD Toolkit.
 
         Args:
         teacher_model: teacher model
         student_model: student model
+        mode: Choose from "Classification", "Regression"
         """
 
         self.teacher_model = teacher_model
         self.student_model = student_model
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.mode = mode
     
     def train(self, 
               dataset, 
@@ -51,6 +54,7 @@ class TrainKD():
         self.student_model.to(self.device)
 
         train_loader, test_loader = dataset
+        self.test_loader = test_loader
 
         if optimizer == "Adam":
             optimizer = optim.Adam(self.student_model.parameters(), lr=lr)
@@ -62,11 +66,11 @@ class TrainKD():
             raise ValueError("Invalid optimizer")
         
         if criterion == "CE":
-            criterion = nn.CrossEntropyLoss()
+            self.criterion = nn.CrossEntropyLoss()
         elif criterion == "MSE":
-            criterion = nn.MSELoss()
+            self.criterion = nn.MSELoss()
         elif criterion == "KL":
-            criterion = nn.KLDivLoss()
+            self.criterion = nn.KLDivLoss()
         else:
             raise ValueError("Invalid criterion")
 
@@ -83,7 +87,7 @@ class TrainKD():
 
         train_teacher(self.teacher_model, self.device, train_loader, optimizer, teacher_epochs, criterion, scheduler)
         train_student(self.student_model, self.teacher_model, self.device, train_loader, optimizer, alpha, beta, student_epochs, scheduler)
-        test(self.student_model, self.device, test_loader, criterion, mode="Classification")
+        test(self.student_model, self.device, test_loader, criterion, mode=self.mode)
         
         return self.student_model
 
@@ -104,3 +108,31 @@ class TrainKD():
             os.makedirs(path)
 
         torch.save(self.student_model.state_dict(), path + f"/student_model_{time}.pth")
+    
+    def model_compare(self):
+        """
+        Compare the teacher and student models in terms of accuracy, loss and number of parameters
+        """
+        from tabulate import tabulate
+
+        if self.mode == "Classification":
+            teacher_acc, teacher_loss = test(self.teacher_model, self.device, self.test_loader, self.criterion, mode=self.mode)
+            student_acc, student_loss = test(self.student_model, self.device, self.test_loader, self.criterion, mode=self.mode)
+        
+            table = [
+                ["Model", "Accuracy", "Loss", "Number of Parameters"],
+                ["Teacher Model", teacher_acc, teacher_loss, sum(p.numel() for p in self.teacher_model.parameters())], 
+                ["Student Model", student_acc, student_loss, sum(p.numel() for p in self.student_model.parameters())]
+            ]
+        
+        elif self.mode == "Regression":
+            teacher_loss = test(self.teacher_model, self.device, self.test_loader, self.criterion, mode=self.mode)
+            student_loss = test(self.student_model, self.device, self.test_loader, self.criterion, mode=self.mode)
+        
+            table = [
+                ["Model", "Loss", "Number of Parameters"],
+                ["Teacher Model", teacher_loss, sum(p.numel() for p in self.teacher_model.parameters())], 
+                ["Student Model", student_loss, sum(p.numel() for p in self.student_model.parameters())]
+            ]
+        
+        print(tabulate(table, headers="firstrow", tablefmt="fancy_grid"))
