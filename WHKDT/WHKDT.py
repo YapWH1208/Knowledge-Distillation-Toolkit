@@ -7,6 +7,7 @@ class TrainKD():
     def __init__(self, 
                  teacher_model, 
                  student_model,
+                 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
                  mode:str="Classification"):
         """
         Initialize the KD Toolkit.
@@ -19,9 +20,11 @@ class TrainKD():
 
         self.teacher_model = teacher_model
         self.student_model = student_model
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device
         self.mode = mode
-    
+
+########################################################################################
+
     def train(self, 
               dataset, 
               alpha:float=0.5, 
@@ -85,18 +88,18 @@ class TrainKD():
         else:
             raise ValueError("Invalid scheduler")
 
-        train_teacher(self.teacher_model, self.device, train_loader, optimizer, teacher_epochs, criterion, scheduler)
-        train_student(self.student_model, self.teacher_model, self.device, train_loader, optimizer, alpha, beta, student_epochs, scheduler)
+        self.teacher_performance = train_teacher(self.teacher_model, self.device, train_loader, optimizer, teacher_epochs, criterion, scheduler)
+        self.student_performance = train_student(self.student_model, self.teacher_model, self.device, train_loader, optimizer, alpha, beta, student_epochs, scheduler)
         test(self.student_model, self.device, test_loader, criterion, mode=self.mode)
         
         return self.student_model
 
-    def save_model(self, path:str):
+    def save_model(self, path:str="./models"):
         """
         Save the student model
 
         Args:
-        path: path to save the student model
+        path: path to save the student model. Default is "./models"
         
         Returns:
         None
@@ -108,10 +111,18 @@ class TrainKD():
             os.makedirs(path)
 
         torch.save(self.student_model.state_dict(), path + f"/student_model_{time}.pth")
-    
+
+########################################################################################
+
     def model_compare(self):
         """
         Compare the teacher and student models in terms of accuracy, loss and number of parameters
+
+        Args:
+        None
+
+        Returns:
+        None
         """
         from tabulate import tabulate
 
@@ -136,3 +147,33 @@ class TrainKD():
             ]
         
         print(tabulate(table, headers="firstrow", tablefmt="fancy_grid"))
+
+########################################################################################
+
+    def plot_loss(self, path:str="./results", savefig:bool=False):
+        """
+        Plot the loss curve of the teacher and student models
+
+        Args:
+        path: path to save the loss curve. Default is "./results"
+        savefig: Save the plot. Default is False
+
+        Returns:
+        None
+        """
+        import os
+        import matplotlib.pyplot as plt
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.teacher_performance, label="Teacher Model")
+        plt.plot(self.student_performance, label="Student Model")
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.show()
+
+        if savefig:
+            plt.savefig(path + "/Loss_curve.png")
