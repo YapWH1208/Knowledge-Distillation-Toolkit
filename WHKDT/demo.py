@@ -57,18 +57,15 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    Trainer = TrainKD(TeacherModel(), StudentModel())
-    student_final = Trainer.train((train_loader, test_loader), 
-                                  alpha=0.5, 
-                                  beta=0.5, 
-                                  optimizer="Adam", 
-                                  lr=0.001, 
-                                  criterion="CE", 
-                                  teacher_epochs=20, 
-                                  student_epochs=20,
-                                  scheduler="None")
+    Trainer = TrainKD(TeacherModel(), StudentModel(), mode="Classification")
+    Trainer.create_criterion("CE")
+    Trainer.create_optimizer("Adam", 0.001)
+    Trainer.create_scheduler("None")
+    Trainer.train((train_loader, test_loader), alpha=0.5, beta=0.5, teacher_epochs=5, student_epochs=5)
 
     Trainer.save_model("models")
+    Trainer.plot_loss()
+    Trainer.model_compare()
 
 if __name__ == "__main__":
     main()
