@@ -7,8 +7,8 @@ class TrainKD():
     def __init__(self, 
                  teacher_model, 
                  student_model,
-                 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-                 mode:str="Classification"):
+                 mode:str,
+                 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),):
         """
         Initialize the KD Toolkit.
 
@@ -21,20 +21,19 @@ class TrainKD():
         self.teacher_model = teacher_model
         self.student_model = student_model
         self.device = device
-        self.mode = mode
+        if mode in ["Classification", "Regression"]:
+            self.mode = mode
+        else:
+            raise ValueError("Invalid mode. Choose from 'Classification', 'Regression'")
 
 ########################################################################################
 
     def train(self, 
               dataset, 
               alpha:float=0.5, 
-              beta:float=0.5, 
-              optimizer:str="Adam", 
-              lr:float=0.001,
-              criterion:str="CrossEntropyLoss",
+              beta:float=0.5,
               teacher_epochs:int=20,
-              student_epochs:int=20,
-              scheduler:str="None"):
+              student_epochs:int=20):
         """
         Train the student model with knowledge distillation.
 
@@ -42,12 +41,8 @@ class TrainKD():
         dataset: Tuple of train and test dataloaders
         alpha: Weight for the soft target loss
         beta: Weight for the hard target loss
-        optimizer: Optimizer. Choose from "Adam", "SGD", "AdamW"
-        lr: Learning rate
-        criterion: Loss function. Choose from "CE", "MSE", "KL"
         teacher_epochs: Number of epochs to train the teacher model
         student_epochs: Number of epochs to train the student model
-        scheduler: Learning rate scheduler. Choose from "None", "StepLR", "MultiStepLR", "ExponentialLR"
 
         Returns:
         student_model: trained student model
@@ -59,40 +54,118 @@ class TrainKD():
         train_loader, test_loader = dataset
         self.test_loader = test_loader
 
-        if optimizer == "Adam":
-            optimizer = optim.Adam(self.student_model.parameters(), lr=lr)
-        elif optimizer == "SGD":
-            optimizer = optim.SGD(self.student_model.parameters(), lr=lr)
-        elif optimizer == "AdamW":
-            optimizer = optim.AdamW(self.student_model.parameters(), lr=lr)
-        else:
-            raise ValueError("Invalid optimizer")
-        
-        if criterion == "CE":
-            self.criterion = nn.CrossEntropyLoss()
-        elif criterion == "MSE":
-            self.criterion = nn.MSELoss()
-        elif criterion == "KL":
-            self.criterion = nn.KLDivLoss()
-        else:
-            raise ValueError("Invalid criterion")
+        if self.mode == "Classification":
+            self.create_optimizer("Adam", 0.001)
+            self.create_criterion("CE")
+            self.create_scheduler("None")
+        elif self.mode == "Regression":
+            self.create_optimizer("Adam", 0.001)
+            self.create_criterion("MSE")
+            self.create_scheduler("None")
 
-        if scheduler == "None":
-            scheduler = None
-        elif scheduler == "StepLR":
-            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-        elif scheduler == "MultiStepLR":
-            scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 20, 30], gamma=0.1)
-        elif scheduler == "ExponentialLR":
-            scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-        else:
-            raise ValueError("Invalid scheduler")
-
-        self.teacher_performance = train_teacher(self.teacher_model, self.device, train_loader, optimizer, teacher_epochs, criterion, scheduler)
-        self.student_performance = train_student(self.student_model, self.teacher_model, self.device, train_loader, optimizer, alpha, beta, student_epochs, scheduler)
-        test(self.student_model, self.device, test_loader, criterion, mode=self.mode)
+        self.teacher_performance = train_teacher(self.teacher_model, self.device, train_loader, self.optimizer, teacher_epochs, self.criterion, self.scheduler)
+        self.student_performance = train_student(self.student_model, self.teacher_model, self.device, train_loader, self.optimizer, alpha, beta, student_epochs, self.scheduler)
+        test(self.student_model, self.device, test_loader, self.criterion, mode=self.mode)
         
         return self.student_model
+
+################################################################################
+
+    def create_optimizer(self, optimizer_name, lr, **kwargs):
+        """
+        Creates an optimizer instance based on the provided name and learning rate.
+
+        Args:
+        optimizer_name: Name of the optimizer. Choose from "Adam", "SGD", "AdamW", "Adadelta", "Adagrad", "Adamax", "RMSprop"
+        lr: Learning rate
+        **kwargs: Additional arguments for the optimizer
+
+        Returns:
+        optimizer: Optimizer instance
+        """
+
+        optimizers = {
+            "Adam": optim.Adam,
+            "SGD": optim.SGD,
+            "AdamW": optim.AdamW,
+            "Adadelta": optim.Adadelta,
+            "Adagrad": optim.Adagrad,
+            "Adamax": optim.Adamax,
+            "RMSprop": optim.RMSprop
+        }
+
+        if optimizer_name not in optimizers:
+            raise ValueError(f"Invalid optimizer name: {optimizer_name}")
+
+        self.optimizer = optimizers[optimizer_name](self.student_model.parameters(), lr=lr, **kwargs)
+    
+################################################################################
+
+    def create_criterion(self, criterion_name):
+        """
+        Creates a criterion instance based on the provided name.
+
+        Args:
+        criterion_name: Name of the criterion. Choose from "CE", "MSE", "KL", "BCE", "BCEWithLogits", "CTC", "NLL", "Poisson", "SmoothL1"
+        **kwargs: Additional arguments for the criterion
+
+        Returns:
+        criterion: Criterion instance
+        """
+
+        criterion = {
+            "CE": nn.CrossEntropyLoss(),
+            "MSE": nn.MSELoss(),
+            "KL": nn.KLDivLoss(),
+            "BCE": nn.BCELoss(),
+            "BCEWithLogits": nn.BCEWithLogitsLoss(),
+            "CTC": nn.CTCLoss(),
+            "NLL": nn.NLLLoss(),
+            "Poisson": nn.PoissonNLLLoss(),
+            "SmoothL1": nn.SmoothL1Loss(),
+        }
+
+        if criterion_name not in criterion:
+            raise ValueError(f"Invalid criterion name: {criterion_name}")
+        
+        self.criterion = criterion[criterion_name]
+
+################################################################################
+
+    def create_scheduler(self, scheduler_name, **kwargs):
+        """
+        Creates a scheduler instance based on the provided name.
+
+        Args:
+        scheduler_name: Name of the scheduler. Choose from "None", "StepLR", "MultiStepLR", "ExponentialLR", "ReduceLROnPlateau", "CyclicLR", "OneCycleLR", "CosineAnnealingLR"
+        **kwargs: Additional arguments for the scheduler
+
+        Returns:
+        scheduler: Scheduler instance
+        """
+        
+        if self.optimizer is None:
+            raise ValueError("Optimizer not found. Please create an optimizer first.")
+        
+        scheduler = {
+            "None": None,
+            "StepLR": optim.lr_scheduler.StepLR,
+            "MultiStepLR": optim.lr_scheduler.MultiStepLR,
+            "ExponentialLR": optim.lr_scheduler.ExponentialLR,
+            "ReduceLROnPlateau": optim.lr_scheduler.ReduceLROnPlateau,
+            "CyclicLR": optim.lr_scheduler.CyclicLR,
+            "OneCycleLR": optim.lr_scheduler.OneCycleLR,
+            "CosineAnnealingLR": optim.lr_scheduler.CosineAnnealingLR
+        }
+
+        if scheduler_name not in scheduler:
+            raise ValueError(f"Invalid scheduler name: {scheduler_name}")
+        
+        
+        
+        self.scheduler = scheduler[scheduler_name](self.optimizer, **kwargs) if scheduler_name != "None" else None
+
+########################################################################################
 
     def save_model(self, path:str="./models"):
         """
@@ -162,6 +235,7 @@ class TrainKD():
         None
         """
         import os
+        from time import time
         import matplotlib.pyplot as plt
 
         if not os.path.exists(path):
@@ -176,4 +250,4 @@ class TrainKD():
         plt.show()
 
         if savefig:
-            plt.savefig(path + "/Loss_curve.png")
+            plt.savefig(path + f"/Loss_curve_{time}.png")
