@@ -56,6 +56,18 @@ class TrainKD():
         Returns:
         student_model: trained student model
         """
+
+        self.teacher_model.to(self.device)
+        self.student_model.to(self.device)
+
+        if self.task == "Classification":
+            self.create_optimizer("Adam", 0.001)
+            self.create_criterion("CE")
+            self.create_scheduler("None")
+        elif self.task == "Regression":
+            self.create_optimizer("Adam", 0.001)
+            self.create_criterion("MSE")
+            self.create_scheduler("None")
         
         if self.mode == "Online":
             self.train_online(dataset, alpha, beta, teacher_epochs, student_epochs)
@@ -66,6 +78,8 @@ class TrainKD():
         
         return self.student_model
     
+########################################################################################
+
     def train_online(self, 
                      dataset, 
                      alpha:float=0.5, 
@@ -86,20 +100,8 @@ class TrainKD():
         student_model: trained student model
         """
         
-        self.teacher_model.to(self.device)
-        self.student_model.to(self.device)
-
         train_loader, test_loader = dataset
         self.test_loader = test_loader
-
-        if self.task == "Classification":
-            self.create_optimizer("Adam", 0.001)
-            self.create_criterion("CE")
-            self.create_scheduler("None")
-        elif self.task == "Regression":
-            self.create_optimizer("Adam", 0.001)
-            self.create_criterion("MSE")
-            self.create_scheduler("None")
 
         self.teacher_performance = train_teacher(self.teacher_model, self.device, train_loader, self.optimizer, teacher_epochs, self.criterion, self.scheduler)
         self.student_performance = train_student(self.student_model, self.teacher_model, self.device, train_loader, self.optimizer, alpha, beta, student_epochs, self.scheduler)
@@ -125,20 +127,8 @@ class TrainKD():
         student_model: trained student model
         """
 
-        self.teacher_model.to(self.device)
-        self.student_model.to(self.device)
-
         train_loader, test_loader = dataset
         self.test_loader = test_loader
-
-        if self.task == "Classification":
-            self.create_optimizer("Adam", 0.001)
-            self.create_criterion("CE")
-            self.create_scheduler("None")
-        elif self.task == "Regression":
-            self.create_optimizer("Adam", 0.001)
-            self.create_criterion("MSE")
-            self.create_scheduler("None")
 
         self.student_performance = train_student(self.student_model, self.teacher_model, self.device, train_loader, self.optimizer, alpha, beta, student_epochs, self.scheduler)
         test(self.student_model, self.device, test_loader, self.criterion, mode=self.task)
@@ -146,10 +136,10 @@ class TrainKD():
         return self.student_model
     
     def train_self(self,
-                      dataset,
-                      alpha:float=0.5,
-                      beta:float=0.5,
-                      student_epochs:int=20):
+                   dataset,
+                   alpha:float=0.5,
+                   beta:float=0.5,
+                   student_epochs:int=20):
         """
         Train the student model with knowledge distillation in self mode.
 
@@ -163,20 +153,8 @@ class TrainKD():
         student_model: trained student model
         """
 
-        self.teacher_model.to(self.device)
-        self.student_model.to(self.device)
-
         train_loader, test_loader = dataset
         self.test_loader = test_loader
-
-        if self.task == "Classification":
-            self.create_optimizer("Adam", 0.001)
-            self.create_criterion("CE")
-            self.create_scheduler("None")
-        elif self.task == "Regression":
-            self.create_optimizer("Adam", 0.001)
-            self.create_criterion("MSE")
-            self.create_scheduler("None")
 
         self.student_performance = train_student(self.student_model, self.student_model, self.device, train_loader, self.optimizer, alpha, beta, student_epochs, self.scheduler)
         test(self.student_model, self.device, test_loader, self.criterion, mode=self.task)
