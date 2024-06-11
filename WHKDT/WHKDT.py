@@ -334,7 +334,10 @@ class TrainKD():
             os.makedirs(path)
 
         plt.figure(figsize=(10, 6))
-        plt.plot(self.teacher_performance, label="Teacher Model")
+
+        if self.mode == "Online":
+            plt.plot(self.teacher_performance, label="Teacher Model")
+            
         plt.plot(self.student_performance, label="Student Model")
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
