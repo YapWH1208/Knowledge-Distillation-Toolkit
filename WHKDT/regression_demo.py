@@ -62,7 +62,7 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    Trainer = TrainKD(TeacherModel(), StudentModel(), mode="Regression")
+    Trainer = TrainKD(task="Regression", mode="Offline", student_model=StudentModel(), teacher_model=TeacherModel(), device="cuda")
     Trainer.create_criterion("MSE")
     Trainer.create_optimizer("AdamW", 0.001)
     Trainer.create_scheduler("None")
