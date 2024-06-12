@@ -57,7 +57,7 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    Trainer = TrainKD(TeacherModel(), StudentModel(), mode="Classification")
+    Trainer = TrainKD(task="Classification", mode="Offline", student_model=StudentModel(), teacher_model=TeacherModel(), device="cuda")
     Trainer.create_criterion("CE")
     Trainer.create_optimizer("Adam", 0.001)
     Trainer.create_scheduler("None")
