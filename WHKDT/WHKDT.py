@@ -5,19 +5,19 @@ import torch.optim as optim
 
 class TrainKD():
     def __init__(self, 
-                 teacher_model, 
-                 student_model,
                  task:str,
                  mode:str,
+                 student_model,
+                 teacher_model=None, 
                  device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),):
         """
         Initialize the KD Toolkit.
 
         Args:
-        teacher_model: teacher model
-        student_model: student model
-        task: Task to perform. Choose from 'Classification', 'Regression'
-        mode: Mode of KD. Choose from 'Online', 'Offline', 'Self'
+        task: Task to perform. Choose from "Classification", "Regression"
+        mode: Mode of KD. Choose from "Online", "Offline", "Self"
+        student_model: Student model
+        teacher_model: Teacher model. Default is None
         device: Device to run the models. Default is 'cuda' if available else 'cpu'
         """
 
@@ -57,7 +57,8 @@ class TrainKD():
         student_model: trained student model
         """
 
-        self.teacher_model.to(self.device)
+        if not self.mode == "Self":
+            self.teacher_model.to(self.device)
         self.student_model.to(self.device)
 
         if self.task == "Classification":
